@@ -1,79 +1,124 @@
-import io.restassured.RestAssured;
+import Helper.CourierApi;
+import com.github.javafaker.Faker;
+import io.restassured.response.Response;
 import org.example.LoginCourier;
+import org.example.RegisterCourier;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
+import io.qameta.allure.Description;
 
-import static io.restassured.RestAssured.given;
-
+import static org.apache.http.HttpStatus.*;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
+@Epic("Courier Login")
+@Feature("Login Tests")
 public class LoginCourierTest {
+
+    private Faker faker;
+    private Integer registeredCourierId;
+    private String randomUsername;
+
     @Before
     public void setUp() {
-        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru";
+        faker = new Faker();
+    }
+
+    @After
+    public void tearDown() {
+        // Вызываем удаление курьера, чтобы гарантировать очистку ресурсов
+        if (registeredCourierId != null) {
+            Response deleteResponse = CourierApi.deleteCourier(String.valueOf(registeredCourierId));
+            deleteResponse
+                    .then()
+                    .statusCode(SC_OK);
+        }
     }
 
     @Test
-    public void validCourierAuthorization() {
-        LoginCourier validCourier = new LoginCourier("dse12346", "1234");
-        given()
-                .contentType("application/json")
-                .body(validCourier)
-                .when()
-                .post("/api/v1/courier/login")
+    @Story("Register and Login Courier")
+    @Description("Test for registering and logging in a courier")
+    public void testRegisterAndLoginCourier() {
+        randomUsername = faker.name().username();
+        String randomPassword = faker.internet().password();
+        String randomName = faker.name().fullName();
+
+        RegisterCourier courierData = new RegisterCourier(randomUsername, randomPassword, randomName);
+
+        // Регистрация курьера
+        Response registerResponse = CourierApi.registerCourier(courierData);
+        registerResponse
                 .then()
-                .statusCode(200)
+                .statusCode(SC_CREATED)
+                .body("ok", equalTo(true));
+
+        registeredCourierId = registerResponse.path("id");
+
+        // Логин курьера и проверка
+        LoginCourier loginData = new LoginCourier(randomUsername, randomPassword);
+        Response loginResponse = CourierApi.loginCourier(loginData);
+        loginResponse
+                .then()
+                .statusCode(SC_OK)
                 .body("id", notNullValue());
     }
 
     @Test
-    public void wrongPasswordAuthorization() {
-        LoginCourier wrongPasswordCourier = new LoginCourier("dse12346", "wrongpassword");
-        given()
-                .contentType("application/json")
-                .body(wrongPasswordCourier)
-                .when()
-                .post("/api/v1/courier/login")
+    @Story("Login with Wrong Password")
+    @Description("Test for logging in with the wrong password")
+    public void testLoginWithWrongPassword() {
+        // Тест для логина с неправильным паролем
+        LoginCourier loginData = new LoginCourier(randomUsername, "wrong_password");
+        Response loginResponse = CourierApi.loginCourier(loginData);
+        loginResponse
                 .then()
-                .statusCode(404); // Проверьте правильный код ошибки
+                .statusCode(SC_BAD_REQUEST); // Подставьте правильный код ошибки
     }
 
     @Test
-    public void missingPasswordAuthorization() {
-        LoginCourier missingPasswordCourier = new LoginCourier("dse12346","");
-        given()
-                .contentType("application/json")
-                .body(missingPasswordCourier)
-                .when()
-                .post("/api/v1/courier/login")
+    @Story("Login with Missing Password")
+    @Description("Test for logging in with a missing password")
+    public void testLoginWithMissingPassword() {
+        // Тест для логина с отсутствующим паролем
+        LoginCourier loginData = new LoginCourier(randomUsername, "");
+        Response loginResponse = CourierApi.loginCourier(loginData);
+        loginResponse
                 .then()
-                .statusCode(400); // Проверьте правильный код ошибки
+                .statusCode(SC_BAD_REQUEST);
     }
 
     @Test
-    public void missingUsernameAuthorization() {
-        LoginCourier missingUsernameCourier = new LoginCourier("", "1234");
-        given()
-                .contentType("application/json")
-                .body(missingUsernameCourier)
-                .when()
-                .post("/api/v1/courier/login")
+    @Story("Login with Missing Username")
+    @Description("Test for logging in with a missing username")
+    public void testLoginWithMissingUsername() {
+        // Тест для логина с отсутствующим именем пользователя
+        LoginCourier loginData = new LoginCourier("", "password");
+        Response loginResponse = CourierApi.loginCourier(loginData);
+        loginResponse
                 .then()
-                .statusCode(400);
+                .statusCode(SC_BAD_REQUEST);
     }
 
     @Test
-    public void nonExistentUserAuthorization() {
-        LoginCourier nonExistentUser = new LoginCourier("nonexistentuser", "password");
-        given()
-                .contentType("application/json")
-                .body(nonExistentUser)
-                .when()
-                .post("/api/v1/courier/login")
+    @Story("Login with Non-Existent User")
+    @Description("Test for logging in with a non-existent user")
+    public void testLoginWithNonExistentUser() {
+        // Тест для логина с несуществующим пользователем
+        LoginCourier loginData = new LoginCourier("nonexistentuser", "password");
+        Response loginResponse = CourierApi.loginCourier(loginData);
+        loginResponse
                 .then()
-                .statusCode(404);
+                .statusCode(SC_NOT_FOUND);
     }
 }
+
+
+
+
 
 
 
