@@ -1,4 +1,4 @@
-import Helper.CourierApi;
+import helper.CourierApi;
 import com.github.javafaker.Faker;
 import io.restassured.response.Response;
 import org.example.LoginCourier;

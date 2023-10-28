@@ -1,4 +1,4 @@
-import Helper.OrderApi;
+import helper.OrderApi;
 import io.restassured.RestAssured;
 import org.example.CreateOrderRequest;
 import org.junit.Before;
@@ -41,7 +41,7 @@ public class OrdersTest {
                 "2020-06-06", 4);
 
         // Используем метод createOrder из OrderApi для создания заказа
-        orderApi.createOrder(orderData);
+        orderApi.sendCreateOrderRequest(orderData);
     }
 
     private List<String> parseColors(String colorsString) {
